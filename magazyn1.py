@@ -5,27 +5,43 @@ from datetime import datetime
 import time
 
 # --- 1. KONFIGURACJA STRONY ---
-st.set_page_config(page_title="Cloud Logistics Pro", page_icon="📦", layout="wide")
+st.set_page_config(page_title="Magazyn", page_icon="📦", layout="wide")
 
-# --- 2. CSS - WYMUSZENIE KOLORÓW I STYLU ---
+# --- 2. CSS - POPRAWKI KOLORÓW I STYLU ---
 st.markdown("""
     <style>
-    /* 1. Tło całej aplikacji - jasnoszare */
+    /* Tło głównej części aplikacji - jasne */
     .stApp {
         background-color: #f0f2f6;
     }
 
-    /* 2. Wymuszenie czarnego koloru czcionki dla tekstów */
-    h1, h2, h3, h4, h5, h6, p, div, span, label, li {
+    /* Tło Paska Bocznego (Sidebar) - Ciemne */
+    [data-testid="stSidebar"] {
+        background-color: #262730;
+    }
+
+    /* --- KOLORY TEKSTÓW --- */
+    
+    /* 1. Tekst główny na jasnym tle (Czarny) */
+    .main h1, .main h2, .main h3, .main p, .main div, .main span {
         color: #31333F !important;
     }
-    
-    /* 3. Wyjątek: Tekst wewnątrz przycisków */
-    button p {
-        color: inherit !important;
+
+    /* 2. Teksty w Sidebrze (Panel boczny) - JASNE/BIAŁE (Twoja prośba) */
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3, 
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] .stMarkdown {
+        color: #ffffff !important; /* Biały kolor czcionki */
     }
-    
-    /* 4. Stylizacja głównego kontenera (Karta) */
+
+    /* Ukrycie stopki i menu */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Karta dla głównej treści */
     .main .block-container {
         background-color: #ffffff;
         padding: 2rem 3rem;
@@ -34,21 +50,17 @@ st.markdown("""
         margin-top: 1rem;
     }
 
-    /* 5. Ukrycie stopki i menu Streamlit */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    /* Stylizacja inputów (żeby tekst wpisywany był czarny na białym tle) */
+    .stTextInput input, .stNumberInput input {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+    }
 
-    /* 6. Powiększenie i kolor liczb w metrykach */
+    /* Powiększenie liczb w metrykach */
     [data-testid="stMetricValue"] {
         font-size: 2.2rem;
         font-weight: 700;
         color: #0066cc !important;
-    }
-    
-    /* 7. Poprawa widoczności pól input */
-    .stTextInput input, .stNumberInput input {
-        color: #31333F !important;
-        background-color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -59,7 +71,7 @@ try:
     key = st.secrets["supabase"]["key"]
     supabase = create_client(url, key)
 except Exception as e:
-    st.error("⚠️ Błąd połączenia! Sprawdź czy masz wpisane hasła w .streamlit/secrets.toml")
+    st.error("⚠️ Błąd połączenia! Sprawdź plik .streamlit/secrets.toml")
     st.stop()
 
 # --- 4. FUNKCJE ---
@@ -82,25 +94,26 @@ def main():
     with col_logo:
         st.markdown("# 📦") 
     with col_title:
-        st.title("Cloud Logistics Hub")
-        st.markdown("**Profesjonalny system zarządzania stanem magazynowym**")
+        # ZMIANA: Nowa nazwa
+        st.title("Magazyn")
+        st.markdown("**System zarządzania stanem magazynowym**")
 
     st.divider()
 
-    # --- SIDEBAR (PANEL BOCZNY) ---
+    # --- PANEL BOCZNY (SIDEBAR) ---
     with st.sidebar:
         st.header("🛠️ Panel Operacyjny")
         st.write("Wypełnij formularz, aby przyjąć towar:")
         
         with st.form("dodawanie_form", clear_on_submit=True):
+            # Etykieta 'Nazwa produktu' będzie teraz biała dzięki CSS wyżej
             nazwa_input = st.text_input("Nazwa produktu", placeholder="np. Opony Zimowe")
             
             c1, c2 = st.columns(2)
             with c1:
                 liczba_input = st.number_input("Ilość szt.", min_value=1, value=10, step=1)
             with c2:
-                # --- TUTAJ BYŁ BŁĄD ---
-                # Poprawiłem min_value na 0.00, żeby pasowało do value=0.00
+                # ZMIANA: step=0.01 zapewnia strzałki do klikania groszy
                 cena_input = st.number_input("Cena jedn. (PLN)", min_value=0.00, value=0.00, step=0.01)
 
             submitted = st.form_submit_button("💾 Zatwierdź przyjęcie", type="primary")
@@ -109,21 +122,21 @@ def main():
                 if nazwa_input:
                     nowy_towar = {"nazwa": nazwa_input, "liczba": liczba_input, "cena": cena_input}
                     try:
-                        with st.spinner("Przetwarzanie danych w chmurze..."):
+                        with st.spinner("Przetwarzanie..."):
                             supabase.table('produkty').insert(nowy_towar).execute()
                             dodaj_log(nazwa_input, "PRZYJĘCIE", liczba_input)
                             time.sleep(0.5)
-                        st.success("✅ Sukces! Towar dodany.")
+                        st.success("✅ Dodano!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Błąd: {e}")
                 else:
-                    st.warning("⚠️ Musisz podać nazwę produktu.")
+                    st.warning("⚠️ Podaj nazwę produktu.")
 
         st.markdown("---")
-        st.info("System połączony z bazą Supabase (PostgreSQL).")
+        st.info("Baza: Supabase (PostgreSQL)")
 
-    # --- DASHBOARD (GŁÓWNY EKRAN) ---
+    # --- DASHBOARD ---
     try:
         df = pobierz_magazyn()
         
@@ -138,7 +151,7 @@ def main():
             m1, m2, m3 = st.columns(3)
             m1.metric("📦 Asortyment (SKU)", f"{total_items}", delta="Pozycji")
             m2.metric("📊 Łączny stan", f"{total_stock:,}".replace(",", " "), delta="Sztuk łącznie")
-            m3.metric("💰 Wartość magazynu", f"{total_value:,.2f} PLN".replace(",", " "), delta="Szacunkowa")
+            m3.metric("💰 Wartość", f"{total_value:,.2f} PLN".replace(",", " "), delta="Szacunkowa")
             
             st.write("") 
 
@@ -168,8 +181,8 @@ def main():
                     }
                 )
 
-                with st.expander("🗑️ Strefa usuwania (Wydanie zewnętrzne)"):
-                    st.warning("Tutaj możesz trwale usunąć towar z ewidencji.")
+                with st.expander("🗑️ Strefa usuwania"):
+                    st.warning("Trwałe usuwanie towaru z ewidencji.")
                     if 'id' in df.columns:
                         c_del1, c_del2 = st.columns([3,1])
                         with c_del1:
@@ -207,8 +220,8 @@ def main():
             st.info("Magazyn jest pusty. Dodaj pierwszy towar w panelu po lewej.")
 
     except Exception as e:
-        st.error("Wystąpił problem z połączeniem.")
-        with st.expander("Szczegóły błędu"):
+        st.error("Wystąpił problem.")
+        with st.expander("Szczegóły"):
             st.write(e)
 
 if __name__ == "__main__":
