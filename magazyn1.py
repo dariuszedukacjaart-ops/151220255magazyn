@@ -4,24 +4,30 @@ from supabase import create_client
 from datetime import datetime
 import time
 
-# --- 1. KONFIGURACJA STRONY I CSS ---
+# --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Cloud Logistics Pro", page_icon="📦", layout="wide")
 
-# Uproszczony CSS - kolory załatwia teraz plik config.toml
-# Tutaj dodajemy tylko styl "karty" dla głównej zawartości
+# --- 2. CSS - WYMUSZENIE JASNEGO MOTYWU I KOLORÓW ---
+# To jest ta część, która zastępuje plik config.toml. 
+# Wymuszamy ciemny tekst na jasnym tle.
 st.markdown("""
     <style>
-    /* Ukrycie menu i stopki */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    /* Stylizacja metryk (dużych liczb) - powiększenie */
-    [data-testid="stMetricValue"] {
-        font-size: 2.2rem;
-        font-weight: 700;
+    /* 1. Tło całej aplikacji - jasnoszare */
+    .stApp {
+        background-color: #f0f2f6;
+    }
+
+    /* 2. Wymuszenie czarnego koloru czcionki dla wszystkich tekstów */
+    h1, h2, h3, h4, h5, h6, p, div, span, label {
+        color: #31333F !important;
     }
     
-    /* Dodanie efektu "karty" do głównego kontenera, żeby odciąć go od tła */
+    /* 3. Wyjątek: Tekst wewnątrz przycisków i inputów */
+    button p {
+        color: inherit !important;
+    }
+    
+    /* 4. Stylizacja głównego kontenera (Karta) */
     .main .block-container {
         background-color: #ffffff;
         padding: 2rem 3rem;
@@ -29,25 +35,36 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         margin-top: 1rem;
     }
+
+    /* 5. Ukrycie stopki i menu Streamlit */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* 6. Powiększenie liczb w metrykach */
+    [data-testid="stMetricValue"] {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #0066cc !important; /* Niebieski kolor dla liczb */
+    }
     
-    /* Delikatne tło dla sidebara */
-    [data-testid="stSidebar"] {
-        background-color: #f8f9fa;
-        border-right: 1px solid #eaeaea;
+    /* 7. Poprawa widoczności inputów (pól do wpisywania) */
+    .stTextInput input, .stNumberInput input {
+        color: #31333F !important;
+        background-color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. POŁĄCZENIE Z BAZĄ ---
+# --- 3. POŁĄCZENIE Z BAZĄ ---
 try:
     url = st.secrets["supabase"]["url"]
     key = st.secrets["supabase"]["key"]
     supabase = create_client(url, key)
 except Exception as e:
-    st.error("⚠️ Błąd połączenia! Sprawdź plik .streamlit/secrets.toml")
+    st.error("⚠️ Błąd połączenia! Sprawdź czy masz wpisane hasła w .streamlit/secrets.toml")
     st.stop()
 
-# --- 3. FUNKCJE ---
+# --- 4. FUNKCJE ---
 def pobierz_magazyn():
     response = supabase.table('produkty').select("*").execute()
     return pd.DataFrame(response.data)
@@ -60,28 +77,25 @@ def dodaj_log(produkt, akcja, ilosc):
     except:
         pass 
 
-# --- 4. GŁÓWNA APLIKACJA ---
+# --- 5. GŁÓWNA APLIKACJA ---
 def main():
     # --- NAGŁÓWEK ---
-    # Używamy kolumn, żeby ładnie ułożyć logo i tytuł
     col_logo, col_title = st.columns([1, 10])
     with col_logo:
-        # Przykładowa ikona logistyczna
-        st.markdown("## 📦") 
+        st.markdown("# 📦") 
     with col_title:
         st.title("Cloud Logistics Hub")
-        st.caption("Profesjonalny system zarządzania stanem magazynowym")
+        st.markdown("**Profesjonalny system zarządzania stanem magazynowym**")
 
     st.divider()
 
-    # --- SIDEBAR ---
+    # --- SIDEBAR (PANEL BOCZNY) ---
     with st.sidebar:
         st.header("🛠️ Panel Operacyjny")
-        st.markdown("---")
-        st.write("**Przyjęcie towaru**")
+        st.write("Wypełnij formularz, aby przyjąć towar:")
         
         with st.form("dodawanie_form", clear_on_submit=True):
-            nazwa_input = st.text_input("Nazwa produktu", placeholder="np. Paleta EURO")
+            nazwa_input = st.text_input("Nazwa produktu", placeholder="np. Opony Zimowe")
             
             c1, c2 = st.columns(2)
             with c1:
@@ -89,45 +103,47 @@ def main():
             with c2:
                 cena_input = st.number_input("Cena jedn. (PLN)", min_value=0.01, value=0.00, step=0.01)
 
+            # Przycisk typu 'primary' (wyróżniony)
             submitted = st.form_submit_button("💾 Zatwierdź przyjęcie", type="primary")
             
             if submitted:
                 if nazwa_input:
                     nowy_towar = {"nazwa": nazwa_input, "liczba": liczba_input, "cena": cena_input}
                     try:
-                        with st.spinner("Synchronizacja z chmurą..."):
+                        with st.spinner("Przetwarzanie danych w chmurze..."):
                             supabase.table('produkty').insert(nowy_towar).execute()
                             dodaj_log(nazwa_input, "PRZYJĘCIE", liczba_input)
                             time.sleep(0.5)
-                        st.success("✅ Dodano do bazy!")
+                        st.success("✅ Sukces! Towar dodany.")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Błąd: {e}")
                 else:
-                    st.warning("⚠️ Nazwa jest wymagana.")
+                    st.warning("⚠️ Musisz podać nazwę produktu.")
 
         st.markdown("---")
-        st.info("ℹ️ Użyj formularza, aby zaktualizować stany w czasie rzeczywistym.")
+        st.info("System połączony z bazą Supabase (PostgreSQL).")
 
-    # --- DASHBOARD ---
+    # --- DASHBOARD (GŁÓWNY EKRAN) ---
     try:
         df = pobierz_magazyn()
         
         if not df.empty:
+            # Zamiana nazw kolumn na małe litery (dla pewności)
             df.columns = [c.lower() for c in df.columns]
             
-            # Obliczenia KPI
+            # KPI (Kluczowe Wskaźniki)
             total_items = df['id'].count()
             total_stock = df['liczba'].sum()
             total_value = (df['liczba'] * df['cena']).sum() if 'cena' in df.columns else 0
 
-            # Kafelki KPI
+            # Wyświetlanie metryk
             m1, m2, m3 = st.columns(3)
-            m1.metric("📦 Asortyment (SKU)", f"{total_items}", delta="Pozycji w bazie")
+            m1.metric("📦 Asortyment (SKU)", f"{total_items}", delta="Pozycji")
             m2.metric("📊 Łączny stan", f"{total_stock:,}".replace(",", " "), delta="Sztuk łącznie")
-            m3.metric("💰 Wartość magazynu", f"{total_value:,.2f} PLN".replace(",", " "), delta="Szacunkowa wycena")
+            m3.metric("💰 Wartość magazynu", f"{total_value:,.2f} PLN".replace(",", " "), delta="Szacunkowa")
             
-            st.markdown("###") # Odstęp
+            st.write("") # Pusty odstęp
 
             # Zakładki
             tab1, tab2 = st.tabs(["📋 Tabela Stanów", "📜 Dziennik Operacji"])
@@ -146,7 +162,6 @@ def main():
                             "Stan magazynowy",
                             format="%d szt.",
                             min_value=0,
-                            # Dynamiczny max paska postępu
                             max_value=max(df['liczba']) * 1.1 if not df.empty else 100,
                         ),
                         "cena": st.column_config.NumberColumn(
@@ -156,15 +171,16 @@ def main():
                     }
                 )
 
+                # Sekcja usuwania
                 with st.expander("🗑️ Strefa usuwania (Wydanie zewnętrzne)"):
-                    st.warning("Operacja trwałego usunięcia z ewidencji.")
+                    st.warning("Tutaj możesz trwale usunąć towar z ewidencji.")
                     if 'id' in df.columns:
                         c_del1, c_del2 = st.columns([3,1])
                         with c_del1:
                             opcje = df.apply(lambda x: f"ID {x['id']}: {x['nazwa']}", axis=1)
                             do_usuniecia = st.selectbox("Wybierz pozycję", opcje, label_visibility="collapsed")
                         with c_del2:
-                            if st.button("Potwierdź usunięcie", type="primary"):
+                            if st.button("Usuń trwale", type="primary"):
                                 id_usun = int(do_usuniecia.split("ID ")[1].split(":")[0])
                                 nazwa_usun = do_usuniecia.split(":")[1].strip()
                                 supabase.table('produkty').delete().eq('id', id_usun).execute()
@@ -173,7 +189,8 @@ def main():
 
             with tab2:
                 st.subheader("Historia zdarzeń")
-                res = supabase.table('historia').select("*").order("id", desc=True).limit(100).execute()
+                # Pobieramy historię
+                res = supabase.table('historia').select("*").order("id", desc=True).limit(50).execute()
                 df_hist = pd.DataFrame(res.data)
                 
                 if not df_hist.empty:
@@ -182,22 +199,21 @@ def main():
                         use_container_width=True,
                         hide_index=True,
                         column_config={
-                            "data": st.column_config.DatetimeColumn("Czas operacji", format="DD.MM.YYYY, HH:mm:ss"),
+                            "data": st.column_config.DatetimeColumn("Czas", format="DD.MM.YYYY, HH:mm"),
                             "produkt": st.column_config.TextColumn("Produkt"),
                             "akcja": st.column_config.TextColumn("Typ ruchu"),
                             "ilosc": st.column_config.NumberColumn("Ilość")
                         }
                     )
                 else:
-                    st.info("Brak zarejestrowanych operacji.")
+                    st.info("Brak wpisów w historii.")
 
         else:
-            st.info("Magazyn jest pusty. Rozpocznij wprowadzanie towaru w panelu bocznym.")
+            st.info("Magazyn jest pusty. Dodaj pierwszy towar w panelu po lewej.")
 
     except Exception as e:
-        # Ładniejsze wyświetlanie błędów
-        st.error("Wystąpił problem z pobraniem danych.")
-        with st.expander("Pokaż szczegóły błędu"):
+        st.error("Wystąpił problem z połączeniem.")
+        with st.expander("Szczegóły błędu"):
             st.write(e)
 
 if __name__ == "__main__":
