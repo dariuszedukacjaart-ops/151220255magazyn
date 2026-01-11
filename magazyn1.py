@@ -7,7 +7,7 @@ import time
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Magazyn", page_icon="📦", layout="wide")
 
-# --- 2. CSS - POPRAWA KONTRASTU (CIEMNIEJSZY SIDEBAR) ---
+# --- 2. CSS - MAKSYMALNY KONTRAST (PITCH BLACK) ---
 st.markdown("""
     <style>
     /* 1. Tło głównej części aplikacji (Jasne) */
@@ -15,26 +15,27 @@ st.markdown("""
         background-color: #f0f2f6;
     }
 
-    /* 2. Tło Paska Bocznego (Sidebar) - BARDZO CIEMNE (Prawie czarne) */
+    /* 2. Tło Paska Bocznego (Sidebar) - IDEALNA CZERŃ */
     [data-testid="stSidebar"] {
-        background-color: #111111 !important; /* Zmiana na ciemniejszy kolor */
+        background-color: #000000 !important; /* Pitch Black */
         border-right: 1px solid #333;
     }
 
     /* --- KOLORY TEKSTÓW --- */
     
     /* Tekst główny na jasnym tle (Czarny) */
-    .main h1, .main h2, .main h3, .main p, .main div, .main span, .main label {
+    .main h1, .main h2, .main h3, .main p, .main div, .main span, .main label, .main li {
         color: #31333F !important;
     }
 
-    /* Teksty w Sidebrze (Panel boczny) - BIAŁE I WYRAŹNE */
+    /* Teksty w Sidebrze (Panel boczny) - BIAŁE */
     [data-testid="stSidebar"] h1, 
     [data-testid="stSidebar"] h2, 
     [data-testid="stSidebar"] h3, 
     [data-testid="stSidebar"] p, 
     [data-testid="stSidebar"] label, 
     [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] div,
     [data-testid="stSidebar"] .stMarkdown {
         color: #ffffff !important;
     }
@@ -53,10 +54,17 @@ st.markdown("""
     }
 
     /* Stylizacja inputów (pola do wpisywania) */
-    /* Inputy w sidebarze też muszą być czytelne */
+    /* Inputy muszą mieć czarny tekst na białym tle, nawet w ciemnym sidebarze */
     .stTextInput input, .stNumberInput input {
         color: #000000 !important;
         background-color: #ffffff !important;
+        border: 1px solid #ccc;
+    }
+    
+    /* Naprawienie widoczności etykiet wewnątrz inputów number */
+    [data-testid="stSidebar"] button {
+        border-color: #444 !important;
+        color: #fff !important;
     }
 
     /* Powiększenie liczb w metrykach */
@@ -108,14 +116,14 @@ def main():
         st.write("Wypełnij formularz, aby przyjąć towar:")
         
         with st.form("dodawanie_form", clear_on_submit=True):
-            # Etykiety tutaj będą teraz białe na bardzo ciemnym tle
+            # Etykiety będą białe na czarnym tle
             nazwa_input = st.text_input("Nazwa produktu", placeholder="np. Opony Zimowe")
             
             c1, c2 = st.columns(2)
             with c1:
                 liczba_input = st.number_input("Ilość szt.", min_value=1, value=10, step=1)
             with c2:
-                # step=0.01 = strzałki do groszy
+                # step=0.01 daje strzałki
                 cena_input = st.number_input("Cena jedn. (PLN)", min_value=0.00, value=0.00, step=0.01)
 
             submitted = st.form_submit_button("💾 Zatwierdź przyjęcie", type="primary")
