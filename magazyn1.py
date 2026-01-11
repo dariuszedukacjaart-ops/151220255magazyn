@@ -7,9 +7,7 @@ import time
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Cloud Logistics Pro", page_icon="📦", layout="wide")
 
-# --- 2. CSS - WYMUSZENIE JASNEGO MOTYWU I KOLORÓW ---
-# To jest ta część, która zastępuje plik config.toml. 
-# Wymuszamy ciemny tekst na jasnym tle.
+# --- 2. CSS - WYMUSZENIE KOLORÓW I STYLU ---
 st.markdown("""
     <style>
     /* 1. Tło całej aplikacji - jasnoszare */
@@ -17,12 +15,12 @@ st.markdown("""
         background-color: #f0f2f6;
     }
 
-    /* 2. Wymuszenie czarnego koloru czcionki dla wszystkich tekstów */
-    h1, h2, h3, h4, h5, h6, p, div, span, label {
+    /* 2. Wymuszenie czarnego koloru czcionki dla tekstów */
+    h1, h2, h3, h4, h5, h6, p, div, span, label, li {
         color: #31333F !important;
     }
     
-    /* 3. Wyjątek: Tekst wewnątrz przycisków i inputów */
+    /* 3. Wyjątek: Tekst wewnątrz przycisków */
     button p {
         color: inherit !important;
     }
@@ -40,14 +38,14 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* 6. Powiększenie liczb w metrykach */
+    /* 6. Powiększenie i kolor liczb w metrykach */
     [data-testid="stMetricValue"] {
         font-size: 2.2rem;
         font-weight: 700;
-        color: #0066cc !important; /* Niebieski kolor dla liczb */
+        color: #0066cc !important;
     }
     
-    /* 7. Poprawa widoczności inputów (pól do wpisywania) */
+    /* 7. Poprawa widoczności pól input */
     .stTextInput input, .stNumberInput input {
         color: #31333F !important;
         background-color: #ffffff !important;
@@ -101,9 +99,10 @@ def main():
             with c1:
                 liczba_input = st.number_input("Ilość szt.", min_value=1, value=10, step=1)
             with c2:
-                cena_input = st.number_input("Cena jedn. (PLN)", min_value=0.01, value=0.00, step=0.01)
+                # --- TUTAJ BYŁ BŁĄD ---
+                # Poprawiłem min_value na 0.00, żeby pasowało do value=0.00
+                cena_input = st.number_input("Cena jedn. (PLN)", min_value=0.00, value=0.00, step=0.01)
 
-            # Przycisk typu 'primary' (wyróżniony)
             submitted = st.form_submit_button("💾 Zatwierdź przyjęcie", type="primary")
             
             if submitted:
@@ -129,21 +128,19 @@ def main():
         df = pobierz_magazyn()
         
         if not df.empty:
-            # Zamiana nazw kolumn na małe litery (dla pewności)
             df.columns = [c.lower() for c in df.columns]
             
-            # KPI (Kluczowe Wskaźniki)
             total_items = df['id'].count()
             total_stock = df['liczba'].sum()
             total_value = (df['liczba'] * df['cena']).sum() if 'cena' in df.columns else 0
 
-            # Wyświetlanie metryk
+            # Metryki
             m1, m2, m3 = st.columns(3)
             m1.metric("📦 Asortyment (SKU)", f"{total_items}", delta="Pozycji")
             m2.metric("📊 Łączny stan", f"{total_stock:,}".replace(",", " "), delta="Sztuk łącznie")
             m3.metric("💰 Wartość magazynu", f"{total_value:,.2f} PLN".replace(",", " "), delta="Szacunkowa")
             
-            st.write("") # Pusty odstęp
+            st.write("") 
 
             # Zakładki
             tab1, tab2 = st.tabs(["📋 Tabela Stanów", "📜 Dziennik Operacji"])
@@ -171,7 +168,6 @@ def main():
                     }
                 )
 
-                # Sekcja usuwania
                 with st.expander("🗑️ Strefa usuwania (Wydanie zewnętrzne)"):
                     st.warning("Tutaj możesz trwale usunąć towar z ewidencji.")
                     if 'id' in df.columns:
@@ -189,7 +185,6 @@ def main():
 
             with tab2:
                 st.subheader("Historia zdarzeń")
-                # Pobieramy historię
                 res = supabase.table('historia').select("*").order("id", desc=True).limit(50).execute()
                 df_hist = pd.DataFrame(res.data)
                 
