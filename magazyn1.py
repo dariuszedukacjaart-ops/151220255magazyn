@@ -7,34 +7,36 @@ import time
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Magazyn", page_icon="📦", layout="wide")
 
-# --- 2. CSS - POPRAWKI KOLORÓW I STYLU ---
+# --- 2. CSS - POPRAWA KONTRASTU (CIEMNIEJSZY SIDEBAR) ---
 st.markdown("""
     <style>
-    /* Tło głównej części aplikacji - jasne */
+    /* 1. Tło głównej części aplikacji (Jasne) */
     .stApp {
         background-color: #f0f2f6;
     }
 
-    /* Tło Paska Bocznego (Sidebar) - Ciemne */
+    /* 2. Tło Paska Bocznego (Sidebar) - BARDZO CIEMNE (Prawie czarne) */
     [data-testid="stSidebar"] {
-        background-color: #262730;
+        background-color: #111111 !important; /* Zmiana na ciemniejszy kolor */
+        border-right: 1px solid #333;
     }
 
     /* --- KOLORY TEKSTÓW --- */
     
-    /* 1. Tekst główny na jasnym tle (Czarny) */
-    .main h1, .main h2, .main h3, .main p, .main div, .main span {
+    /* Tekst główny na jasnym tle (Czarny) */
+    .main h1, .main h2, .main h3, .main p, .main div, .main span, .main label {
         color: #31333F !important;
     }
 
-    /* 2. Teksty w Sidebrze (Panel boczny) - JASNE/BIAŁE (Twoja prośba) */
+    /* Teksty w Sidebrze (Panel boczny) - BIAŁE I WYRAŹNE */
     [data-testid="stSidebar"] h1, 
     [data-testid="stSidebar"] h2, 
     [data-testid="stSidebar"] h3, 
     [data-testid="stSidebar"] p, 
     [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] span,
     [data-testid="stSidebar"] .stMarkdown {
-        color: #ffffff !important; /* Biały kolor czcionki */
+        color: #ffffff !important;
     }
 
     /* Ukrycie stopki i menu */
@@ -50,7 +52,8 @@ st.markdown("""
         margin-top: 1rem;
     }
 
-    /* Stylizacja inputów (żeby tekst wpisywany był czarny na białym tle) */
+    /* Stylizacja inputów (pola do wpisywania) */
+    /* Inputy w sidebarze też muszą być czytelne */
     .stTextInput input, .stNumberInput input {
         color: #000000 !important;
         background-color: #ffffff !important;
@@ -94,7 +97,6 @@ def main():
     with col_logo:
         st.markdown("# 📦") 
     with col_title:
-        # ZMIANA: Nowa nazwa
         st.title("Magazyn")
         st.markdown("**System zarządzania stanem magazynowym**")
 
@@ -106,14 +108,14 @@ def main():
         st.write("Wypełnij formularz, aby przyjąć towar:")
         
         with st.form("dodawanie_form", clear_on_submit=True):
-            # Etykieta 'Nazwa produktu' będzie teraz biała dzięki CSS wyżej
+            # Etykiety tutaj będą teraz białe na bardzo ciemnym tle
             nazwa_input = st.text_input("Nazwa produktu", placeholder="np. Opony Zimowe")
             
             c1, c2 = st.columns(2)
             with c1:
                 liczba_input = st.number_input("Ilość szt.", min_value=1, value=10, step=1)
             with c2:
-                # ZMIANA: step=0.01 zapewnia strzałki do klikania groszy
+                # step=0.01 = strzałki do groszy
                 cena_input = st.number_input("Cena jedn. (PLN)", min_value=0.00, value=0.00, step=0.01)
 
             submitted = st.form_submit_button("💾 Zatwierdź przyjęcie", type="primary")
