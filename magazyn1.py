@@ -8,20 +8,19 @@ st.set_page_config(page_title="Magazyn Cloud", layout="centered")
 
 # --- 2. POŁĄCZENIE Z BAZĄ ---
 try:
-    # Pobieramy hasła z secrets
     url = st.secrets["supabase"]["url"]
     key = st.secrets["supabase"]["key"]
     supabase = create_client(url, key)
 except Exception as e:
-    st.error("⚠️ Błąd połączenia! Upewnij się, że masz wpisane secrets (w pliku lokalnie lub w chmurze).")
+    st.error("⚠️ Błąd połączenia! Sprawdź plik .streamlit/secrets.toml")
     st.stop()
 
 # --- 3. FUNKCJE ---
 
 def pobierz_magazyn():
-    """Pobiera dane z Twojej tabeli Produkty"""
-    # WAŻNE: Nazwa tabeli "Produkty" (z dużej litery, jak na zdjęciu)
-    response = supabase.table('Produkty').select("*").execute()
+    """Pobiera dane z tabeli produkty"""
+    # Pamiętaj: tabela nazywa się 'produkty' (małą literą, bo tak naprawiliśmy w SQL)
+    response = supabase.table('produkty').select("*").execute()
     return pd.DataFrame(response.data)
 
 def dodaj_log(produkt, akcja, ilosc):
@@ -33,11 +32,10 @@ def dodaj_log(produkt, akcja, ilosc):
         "akcja": akcja,
         "ilosc": ilosc
     }
-    # Jeśli zapomniałeś stworzyć tabeli historia w SQL, ta funkcja nie zadziała
     try:
         supabase.table('historia').insert(dane).execute()
     except:
-        pass # Ignorujemy błąd braku historii, żeby apka nie padła
+        pass 
 
 # --- 4. APLIKACJA ---
 
@@ -48,30 +46,37 @@ def main():
     with st.sidebar:
         st.header("Dodaj nowy towar")
         
-        # Formularz dopasowany do Twoich kolumn
+        # 1. Nazwa
         nazwa_input = st.text_input("Nazwa produktu")
-        liczba_input = st.number_input("Liczba (sztuk)", min_value=1, value=1)
-        cena_input = st.number_input("Cena (PLN)", min_value=0.0, value=0.0, step=0.1)
         
-        # (Opcjonalnie można by tu wybierać kategorię, ale na razie upraszczamy)
+        # 2. Ilość
+        liczba_input = st.number_input("Liczba (sztuk)", min_value=1, value=1)
+        
+        # 3. NOWOŚĆ: Cena
+        # format="%.2f" sprawia, że wyświetla się np. 10.00 zamiast 10
+        cena_input = st.number_input("Cena (PLN)", min_value=0.00, value=0.00, step=0.01, format="%.2f")
 
         if st.button("Zapisz w bazie"):
             if nazwa_input:
-                # Mapowanie: Twoja zmienna -> Kolumna w Supabase
+                # Tutaj pakujemy dane do wysyłki
+                # Klucze (po lewej) muszą pasować do nazw kolumn w Supabase!
                 nowy_towar = {
-                    "nazwa": nazwa_input,   # Kolumna: nazwa
-                    "Liczba": liczba_input, # Kolumna: Liczba (z dużej!)
-                    "Cena": cena_input      # Kolumna: Cena (z dużej!)
+                    "nazwa": nazwa_input,   
+                    "Liczba": liczba_input, 
+                    "Cena": cena_input      # Dodaliśmy cenę do paczki
                 }
                 
-                # Wysyłamy do tabeli Produkty
-                supabase.table('Produkty').insert(nowy_towar).execute()
-                
-                # Logujemy w historii
-                dodaj_log(nazwa_input, "PRZYJĘCIE", liczba_input)
-                
-                st.success(f"Dodano: {nazwa_input}")
-                st.rerun()
+                try:
+                    # Wysyłamy do tabeli produkty
+                    supabase.table('produkty').insert(nowy_towar).execute()
+                    
+                    # Logujemy w historii (bez ceny, bo historia rejestruje tylko ruch towaru)
+                    dodaj_log(nazwa_input, "PRZYJĘCIE", liczba_input)
+                    
+                    st.success(f"Dodano: {nazwa_input} (Cena: {cena_input} PLN)")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Błąd zapisu: {e}")
             else:
                 st.warning("Podaj nazwę produktu!")
 
@@ -79,40 +84,46 @@ def main():
     tab1, tab2 = st.tabs(["📊 Stan Magazynu", "📜 Historia Ruchów"])
 
     with tab1:
-        st.subheader("Aktualne stany (Tabela: Produkty)")
-        df = pobierz_magazyn()
+        st.subheader("Aktualne stany")
+        try:
+            df = pobierz_magazyn()
 
-        if not df.empty:
-            # Wyświetlamy tabelę
-            # Ukrywamy kolumnę Kategoria_id, bo jest mało czytelna dla człowieka
-            kolumny_do_wyswietlenia = ["id", "nazwa", "Liczba", "Cena"]
-            # Sprawdzamy czy te kolumny są w danych (dla bezpieczeństwa)
-            dostepne_kolumny = [k for k in kolumny_do_wyswietlenia if k in df.columns]
-            
-            st.dataframe(df[dostepne_kolumny], use_container_width=True, hide_index=True)
-
-            st.divider()
-            st.write("🔴 **Usuwanie towaru**")
-            
-            # Usuwanie po ID
-            if 'id' in df.columns:
-                opcje = df.apply(lambda x: f"{x['id']}: {x['nazwa']}", axis=1)
-                do_usuniecia = st.selectbox("Wybierz towar do usunięcia", opcje)
+            if not df.empty:
+                # Wybieramy kolumny do wyświetlenia, w tym Cenę
+                # Upewniamy się, że nazwy kolumn pasują do tych z bazy
+                kolumny_chciane = ["id", "nazwa", "Liczba", "Cena"]
                 
-                if st.button("Usuń trwale"):
-                    id_usun = int(do_usuniecia.split(":")[0])
-                    nazwa_usun = do_usuniecia.split(":")[1].strip()
+                # Filtrujemy, żeby wyświetlić tylko te kolumny, które faktycznie istnieją
+                dostepne = [k for k in kolumny_chciane if k in df.columns]
+                
+                # Wyświetlamy tabelę
+                st.dataframe(df[dostepne], use_container_width=True, hide_index=True)
+                
+                # Opcjonalnie: Podsumowanie wartości magazynu
+                if "Cena" in df.columns and "Liczba" in df.columns:
+                    wartosc_calkowita = (df["Cena"] * df["Liczba"]).sum()
+                    st.info(f"💰 Całkowita wartość magazynu: {wartosc_calkowita:.2f} PLN")
 
-                    # Usuwamy z tabeli Produkty
-                    supabase.table('Produkty').delete().eq('id', id_usun).execute()
+                st.divider()
+                st.write("🔴 **Usuwanie towaru**")
+                
+                if 'id' in df.columns:
+                    opcje = df.apply(lambda x: f"{x['id']}: {x['nazwa']}", axis=1)
+                    do_usuniecia = st.selectbox("Wybierz towar do usunięcia", opcje)
                     
-                    # Logujemy
-                    dodaj_log(nazwa_usun, "USUNIĘCIE", 0)
-                    
-                    st.success("Usunięto!")
-                    st.rerun()
-        else:
-            st.info("Baza jest pusta. Dodaj coś w panelu bocznym.")
+                    if st.button("Usuń trwale"):
+                        id_usun = int(do_usuniecia.split(":")[0])
+                        nazwa_usun = do_usuniecia.split(":")[1].strip()
+
+                        supabase.table('produkty').delete().eq('id', id_usun).execute()
+                        dodaj_log(nazwa_usun, "USUNIĘCIE", 0)
+                        
+                        st.success("Usunięto!")
+                        st.rerun()
+            else:
+                st.info("Magazyn jest pusty. Dodaj coś w panelu bocznym.")
+        except Exception as e:
+             st.error(f"Błąd pobierania danych: {e}")
 
     with tab2:
         st.subheader("Logi operacji")
@@ -124,7 +135,7 @@ def main():
             else:
                 st.write("Brak historii.")
         except:
-            st.warning("Tabela 'historia' nie istnieje. Uruchom skrypt SQL z instrukcji.")
+             st.write("Brak historii lub tabela nie istnieje.")
 
 if __name__ == "__main__":
     main()
