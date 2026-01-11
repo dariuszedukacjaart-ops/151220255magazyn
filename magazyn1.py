@@ -7,71 +7,73 @@ import time
 # --- 1. KONFIGURACJA STRONY ---
 st.set_page_config(page_title="Magazyn", page_icon="📦", layout="wide")
 
-# --- 2. CSS - MAKSYMALNY KONTRAST (PITCH BLACK) ---
+# --- 2. CSS - DARK MODE (Pełny ciemny motyw) ---
 st.markdown("""
     <style>
-    /* 1. Tło głównej części aplikacji (Jasne) */
+    /* 1. Tło całej aplikacji (Główne tło) - Ciemny grafit */
     .stApp {
-        background-color: #f0f2f6;
+        background-color: #0e1117;
     }
 
-    /* 2. Tło Paska Bocznego (Sidebar) - IDEALNA CZERŃ */
+    /* 2. Tło Paska Bocznego (Sidebar) - Idealna Czerń */
     [data-testid="stSidebar"] {
-        background-color: #000000 !important; /* Pitch Black */
+        background-color: #000000 !important;
         border-right: 1px solid #333;
+    }
+
+    /* 3. Karta główna (Kontener z danymi) - Ciemnoszary (dla kontrastu) */
+    .main .block-container {
+        background-color: #1f2937; /* Ciemnoszary, ale jaśniejszy od tła */
+        padding: 2rem 3rem;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        margin-top: 1rem;
     }
 
     /* --- KOLORY TEKSTÓW --- */
     
-    /* Tekst główny na jasnym tle (Czarny) */
-    .main h1, .main h2, .main h3, .main p, .main div, .main span, .main label, .main li {
-        color: #31333F !important;
+    /* Wszystkie nagłówki i teksty na biało */
+    h1, h2, h3, h4, h5, h6, p, div, span, label, li, .stMarkdown {
+        color: #e5e7eb !important; /* Złamana biel, bardzo czytelna */
     }
 
-    /* Teksty w Sidebrze (Panel boczny) - BIAŁE */
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3, 
-    [data-testid="stSidebar"] p, 
-    [data-testid="stSidebar"] label, 
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] div,
-    [data-testid="stSidebar"] .stMarkdown {
-        color: #ffffff !important;
+    /* Wyjątek: Tekst wewnątrz przycisków i inputów (żeby był czytelny) */
+    button p {
+        color: inherit !important;
     }
 
     /* Ukrycie stopki i menu */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Karta dla głównej treści */
-    .main .block-container {
-        background-color: #ffffff;
-        padding: 2rem 3rem;
-        border-radius: 15px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        margin-top: 1rem;
-    }
+    /* --- STYLIZACJA ELEMENTÓW INTERFEJSU --- */
 
-    /* Stylizacja inputów (pola do wpisywania) */
-    /* Inputy muszą mieć czarny tekst na białym tle, nawet w ciemnym sidebarze */
+    /* Inputy (pola wpisywania) - Ciemne tło, biały tekst */
     .stTextInput input, .stNumberInput input {
-        color: #000000 !important;
-        background-color: #ffffff !important;
-        border: 1px solid #ccc;
+        color: #ffffff !important;
+        background-color: #374151 !important; /* Szare tło inputa */
+        border: 1px solid #4b5563;
     }
     
-    /* Naprawienie widoczności etykiet wewnątrz inputów number */
-    [data-testid="stSidebar"] button {
-        border-color: #444 !important;
-        color: #fff !important;
+    /* Etykiety inputów (małe napisy nad polami) */
+    .stTextInput label, .stNumberInput label {
+        color: #9ca3af !important; /* Szary tekst etykiet */
     }
 
-    /* Powiększenie liczb w metrykach */
+    /* Metryki (Duże liczby) - Jasny błękit dla kontrastu */
     [data-testid="stMetricValue"] {
         font-size: 2.2rem;
         font-weight: 700;
-        color: #0066cc !important;
+        color: #60a5fa !important; /* Jasny niebieski */
+    }
+    
+    [data-testid="stMetricLabel"] {
+        color: #9ca3af !important;
+    }
+    
+    /* Tabela - dostosowanie do ciemnego tła */
+    [data-testid="stDataFrame"] {
+        background-color: #1f2937;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -106,7 +108,7 @@ def main():
         st.markdown("# 📦") 
     with col_title:
         st.title("Magazyn")
-        st.markdown("**System zarządzania stanem magazynowym**")
+        st.caption("System zarządzania stanem magazynowym")
 
     st.divider()
 
@@ -116,7 +118,6 @@ def main():
         st.write("Wypełnij formularz, aby przyjąć towar:")
         
         with st.form("dodawanie_form", clear_on_submit=True):
-            # Etykiety będą białe na czarnym tle
             nazwa_input = st.text_input("Nazwa produktu", placeholder="np. Opony Zimowe")
             
             c1, c2 = st.columns(2)
